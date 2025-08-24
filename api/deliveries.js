@@ -16,15 +16,15 @@ const creds = {
 };
 
 export default async function handler(req, res) {
-  // // Always set CORS headers first
-  // res.setHeader("Access-Control-Allow-Origin", "*"); // or "*" for testing
-  // res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  // res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Always set CORS headers first
+  res.setHeader("Access-Control-Allow-Origin", "*"); // or "*" for testing
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // // Handle OPTIONS preflight immediately
-  // if (req.method === "OPTIONS") {
-  //   return res.status(200).end();
-  // }
+  // Handle OPTIONS preflight immediately
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
 
   try {
     const doc = new GoogleSpreadsheet(SHEET_ID);
