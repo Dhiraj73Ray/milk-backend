@@ -33,8 +33,8 @@ export default async function handler(req, res) {
     const sheet = doc.sheetsByIndex[0];
 
     if (req.method === "POST") {
-      const { user, milk, quantity, date } = req.body;
-      await sheet.addRow({ user, milk, quantity, date });
+      const { user, address, milk, partner, quantity, date } = req.body;
+      await sheet.addRow({ user, address, milk, partner, quantity, date });
       return res.status(200).json({ success: true, message: "Row added" });
     }
 
@@ -42,7 +42,9 @@ export default async function handler(req, res) {
       const rows = await sheet.getRows();
       const data = rows.map((r) => ({
         user: r.user,
+        address: r.address,
         milk: r.milk,
+        partner: r.partner,
         quantity: r.quantity,
         date: r.date,
       }));
