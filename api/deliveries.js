@@ -51,13 +51,68 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
+    // NEW: PUT method to update specific row based on user name AND date
+    if (req.method === "PUT") {
+      const { user, address, milk, partner, quantity, date, targetDate } =
+        req.body;
+
+      // Get all rows
+      const rows = await sheet.getRows();
+
+      // Find the specific row to update based on user name AND date
+      let rowToUpdate;
+
+      if (targetDate) {
+        // If targetDate is provided, find the specific entry by user + date
+        rowToUpdate = rows.find(
+          (row) => row.user === user && row.date === targetDate
+        );
+      } else {
+        // If no targetDate, get all rows for the user and use the most recent
+        const userRows = rows.filter((row) => row.user === user);
+        if (userRows.length > 0) {
+          // Sort by date to get the most recent (assuming date format is consistent)
+          userRows.sort((a, b) => new Date(b.date) - new Date(a.date));
+          rowToUpdate = userRows[0];
+        }
+      }
+
+      if (!rowToUpdate) {
+        return res.status(404).json({
+          error: targetDate
+            ? `No entry found for user "${user}" on date "${targetDate}"`
+            : `No entries found for user "${user}"`,
+        });
+      }
+
+      // Update the fields (only update provided values)
+      if (address !== undefined) rowToUpdate.address = address;
+      if (milk !== undefined) rowToUpdate.milk = milk;
+      if (partner !== undefined) rowToUpdate.partner = partner;
+      if (quantity !== undefined) rowToUpdate.quantity = quantity;
+      if (date !== undefined) rowToUpdate.date = date;
+
+      await rowToUpdate.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Row updated successfully",
+        updatedRow: {
+          user: rowToUpdate.user,
+          address: rowToUpdate.address,
+          milk: rowToUpdate.milk,
+          partner: rowToUpdate.partner,
+          quantity: rowToUpdate.quantity,
+          date: rowToUpdate.date,
+        },
+      });
+    }
+
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }
 }
-
-
 
 // export default function handler(req, res) {
 //   if (req.method === "GET") {
