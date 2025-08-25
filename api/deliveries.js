@@ -72,10 +72,65 @@ async function updateRowPartial(req, sheet) {
   };
 }
 
+// Helper function for DELETE operations
+async function deleteRow(req, sheet) {
+  const { user, targetDate } = req.body;
+
+  // Get all rows
+  const rows = await sheet.getRows();
+
+  // Find the specific row to delete based on user name AND date
+  let rowToDelete;
+
+  if (targetDate) {
+    // If targetDate is provided, find the specific entry by user + date
+    rowToDelete = rows.find(
+      (row) => row.user === user && row.date === targetDate
+    );
+  } else {
+    // If no targetDate, get all rows for the user and use the most recent
+    const userRows = rows.filter((row) => row.user === user);
+    if (userRows.length > 0) {
+      // Sort by date to get the most recent (assuming date format is consistent)
+      userRows.sort((a, b) => new Date(b.date) - new Date(a.date));
+      rowToDelete = userRows[0];
+    }
+  }
+
+  if (!rowToDelete) {
+    return {
+      error: targetDate
+        ? `No entry found for user "${user}" on date "${targetDate}"`
+        : `No entries found for user "${user}"`,
+      status: 404
+    };
+  }
+
+  // Store the row data before deleting for the response
+  const deletedRow = {
+    user: rowToDelete.user,
+    address: rowToDelete.address,
+    milk: rowToDelete.milk,
+    partner: rowToDelete.partner,
+    quantity: rowToDelete.quantity,
+    date: rowToDelete.date,
+  };
+
+  // Delete the row
+  await rowToDelete.delete();
+
+  return {
+    success: true,
+    message: "Row deleted successfully",
+    deletedRow: deletedRow,
+    status: 200
+  };
+}
+
 export default async function handler(req, res) {
   // Always set CORS headers first
-  res.setHeader("Access-Control-Allow-Origin", "*"); // or "*" for testing
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   // Handle OPTIONS preflight immediately
@@ -108,22 +163,20 @@ export default async function handler(req, res) {
       return res.status(200).json(data);
     }
 
-    // NEW: PUT method to update specific row based on user name AND date
     if (req.method === "PUT" || req.method === "PATCH") {
       const result = await updateRowPartial(req, sheet);
       return res.status(result.status).json(result);
     }
 
+    // NEW: DELETE method to remove a specific row
+    if (req.method === "DELETE") {
+      const result = await deleteRow(req, sheet);
+      return res.status(result.status).json(result);
+    }
+
     return res.status(405).json({ error: "Method not allowed" });
   } catch (err) {
+    console.error("Error:", err);
     return res.status(500).json({ error: err.message });
   }
 }
-
-// export default function handler(req, res) {
-//   if (req.method === "GET") {
-//     res.status(200).json({ message: "Hello from deliveries API!" });
-//   } else {
-//     res.status(405).json({ error: "Method not allowed" });
-//   }
-// }
